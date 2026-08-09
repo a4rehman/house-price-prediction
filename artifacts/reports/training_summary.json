@@ -1,0 +1,68 @@
+{
+  "best_model": "ElasticNet",
+  "best_params": {
+    "alpha": 0.0008800004310491025,
+    "l1_ratio": 0.7845401912597663
+  },
+  "cv_rmse_log": 0.11192342797589487,
+  "holdout_metrics": {
+    "rmse": 18847.4,
+    "mae": 13575.3,
+    "r2": 0.9357,
+    "mape_pct": 8.382,
+    "rmse_log": 0.12011,
+    "r2_log": 0.9144
+  },
+  "artifacts_dir": "K:\\house_price_predicition\\artifacts\\models\\best_model",
+  "mlflow": {
+    "run_id": "8bba162004574486a2f8bb48dd728766",
+    "experiment_id": "1",
+    "model_uri": "runs:/8bba162004574486a2f8bb48dd728766/model",
+    "params": {
+      "best_model": "ElasticNet",
+      "alpha": 0.0008800004310491025,
+      "l1_ratio": 0.7845401912597663
+    },
+    "metrics": {
+      "rmse": 18847.4,
+      "mae": 13575.3,
+      "r2": 0.9357,
+      "mape_pct": 8.382,
+      "rmse_log": 0.12011,
+      "r2_log": 0.9144,
+      "best_cv_rmse_log": 0.11192342797589487
+    }
+  },
+  "shap_importance": {
+    "OverallQual": 0.06169575773065203,
+    "GrLivArea": 0.04976139474142518,
+    "HouseAge": 0.03933144220591363,
+    "OverallCond": 0.027248601113215917,
+    "TotalSF": 0.022745246427174445,
+    "QualPerSF": 0.0193735582755017,
+    "TotalFinSF": 0.018781661747224836,
+    "RemodAge": 0.015164896682271035,
+    "MSZoning_RL": 0.014964803392347488,
+    "TotalBath": 0.014018026124144841,
+    "SaleCondition_Normal": 0.01344783836797866,
+    "Foundation_PConc": 0.013427166602810084,
+    "TotalPorchSF": 0.012878645135072869,
+    "BsmtFinSF1": 0.01276549647753058,
+    "GarageCars": 0.012387343070590539,
+    "OverallGrade": 0.012093967811533317,
+    "Functional": 0.012048281285670029,
+    "GarageArea": 0.011472135464205597,
+    "SaleType_New": 0.01138413724267859,
+    "YearBuilt": 0.010156302217509528,
+    "BsmtUnfSF": 0.009208337471482426,
+    "1stFlrSF": 0.009095363313738787,
+    "LotFrontage": 0.009017959674677826,
+    "TotRmsAbvGrd": 0.008940190482377973,
+    "LotArea": 0.00878761249315519,
+    "Fireplaces": 0.008779330647481159,
+    "LotFrontagePerArea": 0.008116246239651462,
+    "KitchenQual": 0.007701281909503868,
+    "Exterior1st_BrkFace": 0.00727152695104129,
+    "BsmtExposure": 0.007219114324375552
+  }
+}

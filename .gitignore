@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Data & artifacts
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+artifacts/models/*
+!artifacts/models/.gitkeep
+artifacts/plots/*
+!artifacts/plots/.gitkeep
+artifacts/mlflow/
+mlruns/
+logs/
+*.log
+
+# Notebooks
+.ipynb_checkpoints/
+
+# MLflow
+mlflow.db
+mlartifacts/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# Streamlit
+.streamlit/secrets.toml

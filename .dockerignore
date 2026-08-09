@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Runtime data — never ship datasets/models into the image
+data/
+artifacts/
+mlruns/
+logs/
+mlartifacts/
+
+# Tests, notebooks, CI
+tests/
+notebooks/
+.github/
+.git/
+.gitignore
+.pytest_cache/
+.ruff_cache/
+
+# Env & IDE
+.env
+.idea/
+.vscode/
