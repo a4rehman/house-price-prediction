@@ -2,7 +2,7 @@
 title: Customer Churn Intelligence
 emoji: "🎯"
 colorFrom: indigo
-colorTo: cyan
+colorTo: blue
 sdk: gradio
 sdk_version: 5.0.0
 app_file: app.py
