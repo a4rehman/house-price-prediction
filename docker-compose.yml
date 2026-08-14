@@ -1,5 +1,5 @@
 # Versioning
-name: Customer Churn Intelligence
+name: House Price Prediction Platform
 
 services:
   mlflow:
@@ -40,9 +40,9 @@ services:
 
   dashboard:
     build: .
-    command: python app.py
+    command: streamlit run src/dashboard/app.py --server.address 0.0.0.0 --server.port 8501
     ports:
-      - "7860:7860"
+      - "8501:8501"
     volumes:
       - ./artifacts:/app/artifacts
       - ./data:/app/data

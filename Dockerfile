@@ -22,9 +22,8 @@ COPY pyproject.toml ./
 COPY src/ ./src/
 RUN pip install --no-deps -e .
 
-# Copy application code, Space entrypoint, and default scripts
+# Copy application code & default entrypoints
 COPY scripts/ ./scripts/
-COPY app.py ./
 
 # Default model source (override with MODEL_URI for MLflow registry)
 ENV MODEL_SOURCE=local
@@ -32,5 +31,5 @@ ENV MODEL_SOURCE=local
 EXPOSE 8000
 
 # Default command: REST API. Override to launch the dashboard:
-#   docker run -p 7860:7860 <image> python app.py
+#   docker run -p 8501:8501 <image> streamlit
 CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

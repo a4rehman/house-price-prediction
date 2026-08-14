@@ -1,7 +1,7 @@
 [project]
-name = "customer-churn-intelligence"
-version = "2.0.0"
-description = "Enterprise-grade customer churn prediction system"
+name = "house-price-prediction"
+version = "1.0.0"
+description = "Production-ready House Price Prediction Platform (Ames dataset)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

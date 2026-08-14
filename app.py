@@ -1,118 +1,196 @@
-"""Gradio Space entry point for Customer Churn Intelligence."""
+"""Gradio Space entry point for House Price Prediction Platform."""
 from __future__ import annotations
+
+from typing import Any
 
 import gradio as gr
 import pandas as pd
-from src.churn import ChurnService, demo_data  # noqa: F401
 from src.config import settings
+from src.data.loader import download_raw_data
+from src.logging_config import setup_logging
+from src.models.inference import PredictionService
+from src.pipeline import run_training
 
-service = ChurnService(settings.models_dir / "churn_model.joblib").load()
-if service.pipeline is None:
-    service.train()
+setup_logging(log_file=None)
+
+# Ensure data and model exist on Space startup
+def ensure_model_ready() -> PredictionService:
+    service = PredictionService()
+    model_file = settings.models_dir / "best_model" / "model.joblib"
+    if not model_file.exists():
+        try:
+            download_raw_data(force=False)
+            run_training(tune=False, register_mlflow=False)
+        except Exception:
+            pass
+    try:
+        service.load()
+    except Exception:
+        pass
+    return service
 
 
-def assess(
-    customer_id, tenure, monthly, total, tickets,
-    contract, internet, payment, senior, paperless,
-):
-    payload = {
-        "customer_id": customer_id,
-        "tenure": tenure,
-        "monthly_charges": monthly,
-        "total_charges": total,
-        "support_tickets": tickets,
-        "contract": contract,
-        "internet_service": internet,
-        "payment_method": payment,
-        "senior_citizen": senior,
-        "paperless_billing": paperless,
+service = ensure_model_ready()
+
+
+def predict_price(
+    overall_qual: int,
+    overall_cond: int,
+    gr_liv_area: float,
+    total_bsmt_sf: float,
+    year_built: int,
+    bedroom_abv_gr: int,
+    full_bath: int,
+    half_bath: int,
+    lot_area: float,
+    neighborhood: str,
+    exter_qual: str,
+    kitchen_qual: str,
+    fireplace_qu: str,
+    central_air: str,
+    garage_cars: int,
+) -> tuple[str, str, pd.DataFrame]:
+    payload: dict[str, Any] = {
+        "OverallQual": int(overall_qual),
+        "OverallCond": int(overall_cond),
+        "GrLivArea": float(gr_liv_area),
+        "TotalBsmtSF": float(total_bsmt_sf),
+        "YearBuilt": int(year_built),
+        "BedroomAbvGr": int(bedroom_abv_gr),
+        "FullBath": int(full_bath),
+        "HalfBath": int(half_bath),
+        "LotArea": float(lot_area),
+        "Neighborhood": str(neighborhood),
+        "ExterQual": str(exter_qual),
+        "KitchenQual": str(kitchen_qual),
+        "FireplaceQu": str(fireplace_qu),
+        "CentralAir": str(central_air),
+        "GarageCars": int(garage_cars),
     }
-    result = service.predict(payload)
-    factors = service.explain(payload)
-    gauge = f"## {result['churn_probability']:.0%}\n### {result['risk_category']} risk"
-    recommendations = "\n".join(f"- {item}" for item in result["recommendations"])
-    return gauge, result["risk_category"], recommendations, pd.DataFrame(factors)
+
+    try:
+        res = service.predict_single(payload)
+        price = res.get("predicted_price", 0.0)
+        formatted_price = f"## 💰 Estimated Valuation: **${price:,.2f}**"
+        model_name = f"**Model:** {res.get('model', 'Ensemble / Regressor')}"
+
+        explanation = res.get("explanation", {})
+        shap_items = explanation.get("explanation", [])
+        if shap_items:
+            df_factors = pd.DataFrame(shap_items)
+            df_factors = df_factors.rename(
+                columns={"feature": "Feature", "value": "SHAP Impact ($)"}
+            )
+        else:
+            df_factors = pd.DataFrame(
+                [{"Feature": k, "Input Value": str(v)} for k, v in payload.items()]
+            )
+        return formatted_price, model_name, df_factors
+    except Exception as exc:
+        return f"## ⚠️ Error in prediction: {exc}", "", pd.DataFrame()
 
 
-def admin_summary():
-    metrics = service.metrics or service.train()
-    kpis = pd.DataFrame([
-        {"Metric": "ROC-AUC", "Value": metrics["roc_auc"]},
-        {"Metric": "Average precision", "Value": metrics["average_precision"]},
-        {"Metric": "Training records", "Value": metrics["records"]},
-        {"Metric": "Churn rate", "Value": f"{metrics['churn_rate']:.1%}"},
-    ])
-    matrix = pd.DataFrame(
-        metrics["confusion_matrix"],
-        index=["Actual retained", "Actual churned"],
-        columns=["Predicted retained", "Predicted churned"],
-    )
-    return metrics, kpis, matrix
+def predict_batch_csv(file_obj: Any) -> tuple[str, pd.DataFrame | None]:
+    if file_obj is None:
+        return "Please upload a CSV file.", None
+    try:
+        df = pd.read_csv(file_obj.name if hasattr(file_obj, "name") else file_obj)
+        preds = service.predict(df)
+        summary = f"Successfully predicted {len(preds):,} properties."
+        return summary, preds
+    except Exception as exc:
+        return f"Error processing CSV: {exc}", None
+
+
+def get_model_summary() -> tuple[dict[str, Any], pd.DataFrame]:
+    meta = getattr(service, "metadata", {})
+    holdout = meta.get("holdout", {})
+    metrics_rows = [
+        {"Metric": "Model Architecture", "Value": str(meta.get("model_name", "Tuned Model"))},
+        {"Metric": "CV RMSE (log)", "Value": str(meta.get("cv_rmse_log", "N/A"))},
+        {"Metric": "Holdout RMSE ($)", "Value": f"${holdout.get('rmse', 0):,.2f}" if 'rmse' in holdout else "N/A"},
+        {"Metric": "Holdout MAE ($)", "Value": f"${holdout.get('mae', 0):,.2f}" if 'mae' in holdout else "N/A"},
+        {"Metric": "Holdout R²", "Value": str(holdout.get("r2", "N/A"))},
+    ]
+    return meta, pd.DataFrame(metrics_rows)
 
 
 theme = gr.themes.Soft(
-    primary_hue="indigo", secondary_hue="cyan", neutral_hue="slate",
+    primary_hue="blue",
+    secondary_hue="indigo",
+    neutral_hue="slate",
 )
 
-with gr.Blocks(theme=theme, title="Customer Churn Intelligence") as demo:
+with gr.Blocks(theme=theme, title="House Price Prediction Platform") as demo:
     gr.Markdown(
-        "# Customer Churn Intelligence\n"
-        "### Enterprise retention decisions, made actionable."
+        "# 🏠 House Price Prediction Platform\n"
+        "### Production-Grade Ames Housing Valuation & Explainable ML"
     )
+
     with gr.Tabs():
-        with gr.Tab("Customer Search & Risk"):
+        with gr.Tab("🔮 Single Property Valuation"):
             with gr.Row():
                 with gr.Column(scale=2):
-                    customer_id = gr.Textbox(value="CUST-10001", label="Customer ID")
                     with gr.Row():
-                        tenure = gr.Slider(0, 120, value=8, step=1, label="Tenure (months)")
-                        monthly = gr.Slider(0, 200, value=92, label="Monthly charges")
+                        overall_qual = gr.Slider(1, 10, value=7, step=1, label="Overall Quality (1-10)")
+                        overall_cond = gr.Slider(1, 10, value=5, step=1, label="Overall Condition (1-10)")
                     with gr.Row():
-                        total = gr.Number(value=736, label="Total charges")
-                        tickets = gr.Slider(0, 15, value=2, step=1, label="Support tickets")
+                        gr_liv_area = gr.Number(value=1800, label="Above Ground Living Area (sq ft)")
+                        total_bsmt_sf = gr.Number(value=1000, label="Total Basement Area (sq ft)")
+                        lot_area = gr.Number(value=9500, label="Lot Area (sq ft)")
                     with gr.Row():
-                        contract = gr.Dropdown(
-                            ["Month-to-month", "One year", "Two year"],
-                            value="Month-to-month", label="Contract",
+                        year_built = gr.Slider(1870, 2025, value=2005, step=1, label="Year Built")
+                        bedroom_abv_gr = gr.Slider(0, 8, value=3, step=1, label="Bedrooms Above Grade")
+                        full_bath = gr.Slider(0, 5, value=2, step=1, label="Full Bathrooms")
+                        half_bath = gr.Slider(0, 3, value=1, step=1, label="Half Bathrooms")
+                    with gr.Row():
+                        neighborhood = gr.Dropdown(
+                            [
+                                "NAmes", "CollgCr", "OldTown", "Edwards", "Somerst",
+                                "NridgHt", "Gilbert", "Sawyer", "NWAmes", "SawyerW",
+                                "BrkSide", "Crawfor", "Mitchel", "NoRidge", "Timber",
+                                "IDOTRR", "ClearCr", "StoneBr", "SWISU", "Blmngtn",
+                            ],
+                            value="CollgCr",
+                            label="Neighborhood",
                         )
-                        internet = gr.Dropdown(
-                            ["Fiber optic", "DSL", "None"],
-                            value="Fiber optic", label="Internet service",
-                        )
+                        kitchen_qual = gr.Dropdown(["Ex", "Gd", "TA", "Fa", "Po"], value="Gd", label="Kitchen Quality")
+                        exter_qual = gr.Dropdown(["Ex", "Gd", "TA", "Fa", "Po"], value="Gd", label="Exterior Quality")
                     with gr.Row():
-                        payment = gr.Dropdown(
-                            ["Electronic check", "Mailed check", "Bank transfer", "Credit card"],
-                            value="Electronic check", label="Payment method",
-                        )
-                        senior = gr.Radio([0, 1], value=0, label="Senior citizen")
-                    paperless = gr.Radio(["Yes", "No"], value="Yes", label="Paperless billing")
-                    run = gr.Button("Assess churn risk", variant="primary")
-                with gr.Column():
-                    gauge = gr.Markdown()
-                    risk = gr.Textbox(label="Risk category")
-                    recs = gr.Markdown(label="Recommended next actions")
-            factors = gr.Dataframe(label="Explainability: drivers of risk", interactive=False)
-            run.click(
-                assess,
-                [customer_id, tenure, monthly, total, tickets,
-                 contract, internet, payment, senior, paperless],
-                [gauge, risk, recs, factors],
+                        fireplace_qu = gr.Dropdown(["Ex", "Gd", "TA", "Fa", "Po", "None"], value="Gd", label="Fireplace Quality")
+                        central_air = gr.Radio(["Y", "N"], value="Y", label="Central Air")
+                        garage_cars = gr.Slider(0, 5, value=2, step=1, label="Garage Capacity (Cars)")
+
+                    predict_btn = gr.Button("Calculate Valuation", variant="primary")
+
+                with gr.Column(scale=1):
+                    price_output = gr.Markdown("## Click 'Calculate Valuation' to predict")
+                    model_output = gr.Markdown("")
+                    factors_output = gr.Dataframe(label="Feature Impact / Explanations", interactive=False)
+
+            predict_btn.click(
+                predict_price,
+                inputs=[
+                    overall_qual, overall_cond, gr_liv_area, total_bsmt_sf,
+                    year_built, bedroom_abv_gr, full_bath, half_bath,
+                    lot_area, neighborhood, exter_qual, kitchen_qual,
+                    fireplace_qu, central_air, garage_cars,
+                ],
+                outputs=[price_output, model_output, factors_output],
             )
-        with gr.Tab("Admin Dashboard"):
-            refresh = gr.Button("Refresh model performance")
-            overview = gr.JSON(label="Model analytics")
-            kpis = gr.Dataframe(label="Key metrics", interactive=False)
-            matrix = gr.Dataframe(label="Confusion matrix", interactive=False)
-            refresh.click(admin_summary, outputs=[overview, kpis, matrix])
-        with gr.Tab("Data & API"):
-            gr.Markdown(
-                "Upload labelled customer data to `POST /api/v1/admin/train`, then use "
-                "the authenticated prediction API. Set `API_KEY` in your Space secrets "
-                "to enforce API-key authentication.\n\n"
-                "Expected fields: `customer_id`, `tenure`, `monthly_charges`, "
-                "`total_charges`, `support_tickets`, `contract`, `internet_service`, "
-                "`payment_method`, `senior_citizen`, `paperless_billing`, and "
-                "`Churn` for training."
-            )
+
+        with gr.Tab("📁 Batch CSV Prediction"):
+            gr.Markdown("Upload a CSV file containing property features to run bulk valuations.")
+            csv_input = gr.File(label="Upload Ames CSV File", file_types=[".csv"])
+            batch_btn = gr.Button("Run Batch Predictions", variant="primary")
+            batch_status = gr.Markdown()
+            batch_output = gr.Dataframe(label="Batch Predictions", interactive=False)
+            batch_btn.click(predict_batch_csv, inputs=[csv_input], outputs=[batch_status, batch_output])
+
+        with gr.Tab("📊 Model Metadata & Metrics"):
+            meta_btn = gr.Button("Refresh Model Info")
+            meta_kpis = gr.Dataframe(label="Key Performance Indicators", interactive=False)
+            meta_json = gr.JSON(label="Full Model Metadata")
+            meta_btn.click(get_model_summary, outputs=[meta_json, meta_kpis])
 
 demo.launch()
