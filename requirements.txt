@@ -4,18 +4,6 @@ pandas>=2.1,<3.0
 scikit-learn>=1.4,<1.6
 scipy>=1.12
 
-# Gradient boosting backends
-xgboost>=2.0
-lightgbm>=4.3
-catboost>=1.2.5
-
-# Explainability
-shap>=0.45
-
-# Experiment tracking & model registry
-mlflow>=2.12
-optuna>=3.6
-
 # Web / API
 fastapi>=0.111
 uvicorn[standard]>=0.29
@@ -24,13 +12,8 @@ pydantic>=2.7
 pydantic-settings>=2.3
 
 # Dashboard
-gradio>=5.0
-
-# Plotting
-matplotlib>=3.8
-seaborn>=0.13
+gradio>=5.31
 
 # Misc
 joblib>=1.4
-requests>=2.31
 pyyaml>=6.0

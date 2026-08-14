@@ -13,9 +13,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .. import __version__
-from ..logging_config import get_logger, setup_logging
 from ..churn import ChurnService
 from ..config import settings
+from ..logging_config import get_logger, setup_logging
 from .endpoints import health, models, predict
 
 logger = get_logger(__name__)
