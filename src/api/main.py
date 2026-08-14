@@ -14,7 +14,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .. import __version__
 from ..logging_config import get_logger, setup_logging
-from ..models.inference import PredictionService
+from ..churn import ChurnService
+from ..config import settings
 from .endpoints import health, models, predict
 
 logger = get_logger(__name__)
@@ -25,7 +26,7 @@ setup_logging(log_file=None)
 class AppState:
     """Shared, process-wide state."""
 
-    service: PredictionService = None  # type: ignore[assignment]
+    service: ChurnService | None = None
 
 
 app_state = AppState()
@@ -33,11 +34,9 @@ app_state = AppState()
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="House Price Prediction API",
+        title="Customer Churn Intelligence API",
         description=(
-            "Production-ready REST API for the Ames house price prediction "
-            "platform. Supports single predictions, batch predictions, CSV "
-            "uploads, SHAP explanations, and model registry introspection."
+            "Enterprise churn predictions, model analytics, explainability, and administration."
         ),
         version=__version__,
         docs_url="/docs",
@@ -52,7 +51,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    app_state.service = PredictionService()
+    app_state.service = ChurnService(settings.models_dir / "churn_model.joblib")
 
     app.include_router(health.router)
     app.include_router(predict.router)
@@ -63,8 +62,9 @@ def create_app() -> FastAPI:
         # Warm the model so first request is fast; failures are tolerated.
         try:
             app_state.service.load()
-            logger.info("Model loaded at startup: %s",
-                        app_state.service.metadata.get("model_name"))
+            if app_state.service.pipeline is None:
+                app_state.service.train()
+            logger.info("Churn model ready")
         except Exception as exc:
             logger.warning("Model not loaded at startup: %s", exc)
 

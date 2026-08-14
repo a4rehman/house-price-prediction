@@ -1,4 +1,4 @@
-"""Central configuration for the House Price Prediction Platform.
+"""Central configuration for the Customer Churn Intelligence platform.
 
 All settings can be overridden through environment variables or a `.env`
 file. Values are resolved at import time and exposed as a single `settings`
@@ -37,13 +37,10 @@ class Settings(BaseSettings):
     mlruns_dir: Path = PROJECT_ROOT / "mlruns"
 
     # --- Data source -------------------------------------------------------
-    data_url: str = (
-        "https://raw.githubusercontent.com/inria/scikit-learn-mooc/main/"
-        "datasets/house_prices.csv"
-    )
-    raw_data_filename: str = "house_prices.csv"
-    target_column: str = "SalePrice"
-    id_column: str = "Id"
+    data_url: str = ""
+    raw_data_filename: str = "customer_churn.csv"
+    target_column: str = "Churn"
+    id_column: str = "customer_id"
 
     # --- Data quality ------------------------------------------------------
     na_values: list[str] = ["?", "NA", "N/A", "null"]
@@ -60,13 +57,13 @@ class Settings(BaseSettings):
     use_log_target: bool = True
 
     # --- Model registry ----------------------------------------------------
-    registered_model_name: str = "house_price_predictor"
+    registered_model_name: str = "customer_churn_predictor"
     default_model_version: str = "latest"
     model_uri: str = ""  # e.g. mlflow://models:/house_price_predictor/Production
 
     # --- Logging -----------------------------------------------------------
     log_level: str = "INFO"
-    log_file: str = "logs/house_price.log"
+    log_file: str = "logs/churn.log"
 
     # --- API ---------------------------------------------------------------
     api_host: str = "0.0.0.0"

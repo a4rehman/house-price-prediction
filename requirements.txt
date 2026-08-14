@@ -24,7 +24,7 @@ pydantic>=2.7
 pydantic-settings>=2.3
 
 # Dashboard
-streamlit>=1.36
+gradio>=5.0
 
 # Plotting
 matplotlib>=3.8
