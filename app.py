@@ -5,6 +5,7 @@ from typing import Any
 
 import gradio as gr
 import pandas as pd
+
 from src.config import settings
 from src.data.loader import download_raw_data
 from src.logging_config import setup_logging
@@ -13,7 +14,7 @@ from src.pipeline import run_training
 
 setup_logging(log_file=None)
 
-# Ensure data and model exist on Space startup
+
 def ensure_model_ready() -> PredictionService:
     service = PredictionService()
     model_file = settings.models_dir / "best_model" / "model.joblib"
@@ -193,4 +194,4 @@ with gr.Blocks(theme=theme, title="House Price Prediction Platform") as demo:
             meta_json = gr.JSON(label="Full Model Metadata")
             meta_btn.click(get_model_summary, outputs=[meta_json, meta_kpis])
 
-demo.launch()
+demo.launch(ssr_mode=False)
